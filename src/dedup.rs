@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::hash::{BuildHasher, Hash, Hasher};
 
 pin_project! {
+    /// Stream for the [`try_dedup`](super::ext::JTryStreamExt::try_dedup) method
     #[must_use = "streams do nothing unless polled"]
     pub struct TryDedupStream<S> {
         #[pin]
@@ -73,6 +74,7 @@ where
 }
 
 pin_project! {
+    /// Stream for the [`dedup`](super::ext::JStreamExt::dedup) method
     #[must_use = "streams do nothing unless polled"]
     pub struct DedupStream<S> {
         #[pin]

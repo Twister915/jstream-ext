@@ -1,6 +1,7 @@
 use crate::op_prelude::*;
 
 pin_project! {
+    /// Stream for the [`fuse_on_fail`](super::JTryStreamExt::fuse_on_fail) method
     #[must_use = "streams do nothing unless polled"]
     pub struct FuseOnFail<S> {
         #[pin]

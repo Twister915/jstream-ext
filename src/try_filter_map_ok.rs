@@ -1,6 +1,7 @@
 use crate::op_prelude::*;
 
 pin_project! {
+    /// Stream for the [`try_filter_map_ok`](super::JTryStreamExt::try_filter_map_ok) method
     #[must_use = "streams do nothing unless polled"]
     pub struct TryFilterMapOk<S, F, R> {
         #[pin]

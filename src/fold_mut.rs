@@ -3,6 +3,7 @@ use crate::op_prelude::*;
 const POLL_AFTER_COMPLETED_MSG: &'static str = "call to poll after completed!";
 
 pin_project! {
+    /// Future for the [`try_fold_mut`](super::JTryStreamExt::try_fold_mut) method
     #[must_use = "futures do nothing unless polled"]
     pub struct TryFoldMut<S, T, F, Fut> {
         #[pin]
@@ -84,6 +85,7 @@ where
 }
 
 pin_project! {
+    /// Future for the [`fold_mut`](super::JStreamExt::fold_mut) method
     #[must_use = "futures do nothing unless polled"]
     pub struct FoldMut<S, T, F, Fut> {
         #[pin]
