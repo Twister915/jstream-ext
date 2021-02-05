@@ -17,21 +17,17 @@ where
 {
     type Item = Result<R, S::Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        use Poll::*;
-        loop {
-            let this = self.as_mut().project();
-
-            match futures::ready!(this.src.try_poll_next(cx)) {
-                Some(Ok(next)) => {
-                    if let Some(out) = (this.predicate)(next) {
-                        return Ready(Some(Ok(out)));
-                    }
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut this = self.project();
+        Poll::Ready(loop {
+            match futures::ready!(this.src.as_mut().try_poll_next(cx)) {
+                Some(Ok(next)) => if let Some(out) = (this.predicate)(next) {
+                    break Some(Ok(out));
                 }
-                Some(Err(err)) => return Ready(Some(Err(err))),
-                None => return Ready(None),
+                Some(Err(err)) => break Some(Err(err)),
+                None => break None,
             }
-        }
+        })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

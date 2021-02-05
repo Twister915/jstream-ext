@@ -21,20 +21,16 @@ where
 {
     type Item = Result<S::Ok, S::Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        use Poll::*;
-        loop {
-            let this = self.as_mut().project();
-
-            match futures::ready!(this.src.try_poll_next(cx)) {
-                Some(Ok(v)) => {
-                    if this.known.insert(hash(&*this.hasher, &v)) {
-                        return Ready(Some(Ok(v)));
-                    }
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut this = self.project();
+        Poll::Ready(loop {
+            match futures::ready!(this.src.as_mut().try_poll_next(cx)) {
+                Some(Ok(v)) => if this.known.insert(hash(&*this.hasher, &v)) {
+                    break Some(Ok(v));
                 }
-                other => return Ready(other),
+                other => break other,
             }
-        }
+        })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -98,18 +94,17 @@ where
 {
     type Item = S::Item;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            let this = self.as_mut().project();
-            match futures::ready!(this.src.poll_next(cx)) {
-                Some(next) => {
-                    if this.known.insert(hash(&*this.hasher, &next)) {
-                        return Poll::Ready(Some(next));
-                    }
-                },
-                None => return Poll::Ready(None),
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut this = self.project();
+        Poll::Ready(loop {
+            if let Some(next) = futures::ready!(this.src.as_mut().poll_next(cx)) {
+                if this.known.insert(hash(&*this.hasher, &next)) {
+                    break Some(next);
+                }
+            } else {
+                break None;
             }
-        }
+        })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

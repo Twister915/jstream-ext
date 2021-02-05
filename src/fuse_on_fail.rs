@@ -6,6 +6,7 @@ pin_project! {
         #[pin]
         src: S,
         fused: bool,
+        failed: bool,
     }
 }
 
@@ -16,25 +17,29 @@ where
     type Item = Result<S::Ok, S::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        use Poll::*;
+        let mut this = self.as_mut().project();
+        if *this.fused {
+            panic!("poll after fused!")
+        }
 
-        let this = self.as_mut().project();
-
-        if !*this.fused {
-            match futures::ready!(this.src.try_poll_next(cx)) {
-                r @ Some(Ok(_)) => Ready(r),
-                None => {
-                    *this.fused = true;
-                    Ready(None)
-                }
-                Some(Err(err)) => {
-                    *this.fused = true;
-                    Ready(Some(Err(err)))
+        Poll::Ready({
+            if *this.failed {
+                *this.fused = true;
+                None
+            } else {
+                match futures::ready!(this.src.as_mut().try_poll_next(cx)) {
+                    r @ Some(Ok(_)) => r,
+                    None => {
+                        *this.fused = true;
+                        None
+                    }
+                    Some(Err(err)) => {
+                        *this.failed = true;
+                        Some(Err(err))
+                    }
                 }
             }
-        } else {
-            Poll::Ready(None)
-        }
+        })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -42,10 +47,7 @@ where
     }
 }
 
-impl<S> FusedStream for FuseOnFail<S>
-where
-    S: TryStream,
-{
+impl<S> FusedStream for FuseOnFail<S> where S: TryStream {
     fn is_terminated(&self) -> bool {
         self.fused
     }
@@ -66,7 +68,7 @@ where
     S: TryStream,
 {
     pub(crate) fn new(src: S) -> Self {
-        Self { src, fused: false }
+        Self { src, fused: false, failed: false }
     }
 }
 

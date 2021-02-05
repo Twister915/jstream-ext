@@ -16,22 +16,20 @@ where
     type Output = Result<Option<S::Ok>, S::Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        use Poll::*;
-
         let this = self.project();
-
         if *this.fused {
             panic!("poll() called after future was already completed...")
         }
 
-        let out = futures::ready!(this.src.try_poll_next(cx));
+        Poll::Ready({
+            let out = futures::ready!(this.src.try_poll_next(cx));
+            *this.fused = true;
 
-        *this.fused = true;
-
-        Ready(match out {
-            Some(Ok(value)) => Ok(Some(value)),
-            Some(Err(err)) => Err(err),
-            None => Ok(None),
+            match out {
+                Some(Ok(value)) => Ok(Some(value)),
+                Some(Err(err)) => Err(err),
+                None => Ok(None),
+            }
         })
     }
 }

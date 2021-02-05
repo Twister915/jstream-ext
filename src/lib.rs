@@ -2,7 +2,7 @@ macro_rules! op_mods {
     {$($nam: ident),*$(,)*} => {
         $(pub mod $nam;)*
         pub(crate) mod ops {
-            $(pub use crate::$nam::*;)*
+            $(pub use super::$nam::*;)*
         }
         pub use ops::*;
     }
