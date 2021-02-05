@@ -76,10 +76,10 @@ where
 
 #[cfg(feature = "sink")]
 impl<S, T, F, Fut, Item, E> Sink<Item> for TryFoldMut<S, T, F, Fut>
-    where
-        S: Sink<Item, Error=E> + Stream + FusedStream,
-        F: FnMut(&mut T, S::Item) -> Fut,
-        Fut: Future<Output=()>,
+where
+    S: Sink<Item, Error=E> + Stream + FusedStream,
+    F: FnMut(&mut T, S::Item) -> Fut,
+    Fut: Future<Output=()>,
 {
 
     type Error = E;
