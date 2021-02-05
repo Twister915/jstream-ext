@@ -20,7 +20,7 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
         Poll::Ready(loop {
-            match futures::ready!(this.src.as_mut().try_poll_next(cx)) {
+            match ready!(this.src.as_mut().try_poll_next(cx)) {
                 Some(Ok(next)) => if let Some(out) = (this.predicate)(next) {
                     break Some(Ok(out));
                 }
@@ -49,9 +49,7 @@ where
     S: TryStream + FusedStream + Sink<Item, Error=E>,
     F: FnMut(S::Ok) -> Option<R>,
 {
-    type Error = E;
-
-    delegate_sink!(src, Item);
+    delegate_sink!(src, E, Item);
 }
 
 impl<S, F, R> TryFilterMapOk<S, F, R>

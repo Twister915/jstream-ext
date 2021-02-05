@@ -10,7 +10,9 @@ macro_rules! op_mods {
 
 #[cfg(feature = "sink")]
 macro_rules! delegate_sink {
-    ($field:ident, $item:ty) => {
+    ($field:ident, $err: ty, $item: ty) => {
+        type Error = $err;
+
         fn poll_ready(
             self: core::pin::Pin<&mut Self>,
             cx: &mut core::task::Context<'_>,
@@ -43,7 +45,7 @@ macro_rules! delegate_fused {
         fn is_terminated(&self) -> bool {
             self.$nam.is_terminated()
         }
-    }
+    };
 }
 
 op_mods! {
@@ -55,6 +57,7 @@ op_mods! {
 }
 
 pub(crate) mod op_prelude {
+    pub use futures::ready;
     #[cfg(feature = "sink")]
     pub use futures::sink::Sink;
     pub use futures::stream::FusedStream;

@@ -1,5 +1,4 @@
 use crate::op_prelude::*;
-use futures::Sink;
 
 const POLL_AFTER_COMPLETED_MSG: &'static str = "call to poll after completed!";
 
@@ -44,7 +43,7 @@ where
         Poll::Ready(loop {
             // poll future if we have one
             if let Some(future) = this.pending_future.as_mut().as_pin_mut() {
-                let out = futures::ready!(future.try_poll(cx));
+                let out = ready!(future.try_poll(cx));
                 this.pending_future.set(None);
                 if let Err(err) = out {
                     this.state.take();
@@ -53,7 +52,7 @@ where
             }
 
             // poll upstream
-            match futures::ready!(this.upstream.as_mut().try_poll_next(cx)) {
+            match ready!(this.upstream.as_mut().try_poll_next(cx)) {
                 // got something, no error
                 Some(Ok(next)) => {
                     let state = this.state.as_mut().expect(POLL_AFTER_COMPLETED_MSG);
@@ -81,10 +80,7 @@ where
     F: FnMut(&mut T, S::Item) -> Fut,
     Fut: Future<Output=()>,
 {
-
-    type Error = E;
-
-    delegate_sink!(upstream, Item);
+    delegate_sink!(upstream, E, Item);
 }
 
 pin_project! {
@@ -129,12 +125,12 @@ where
         Poll::Ready(loop {
             // poll future if we have one
             if let Some(future) = this.pending_future.as_mut().as_pin_mut() {
-                futures::ready!(future.poll(cx));
+                ready!(future.poll(cx));
                 this.pending_future.set(None);
             }
 
             // poll upstream
-            match futures::ready!(this.upstream.as_mut().poll_next(cx)) {
+            match ready!(this.upstream.as_mut().poll_next(cx)) {
                 // got next item
                 Some(next) => {
                     let state = this.state.as_mut().expect(POLL_AFTER_COMPLETED_MSG);
@@ -158,8 +154,5 @@ where
     F: FnMut(&mut T, S::Item) -> Fut,
     Fut: Future<Output=()>,
 {
-
-    type Error = S::Error;
-
-    delegate_sink!(upstream, Item);
+    delegate_sink!(upstream, S::Error, Item);
 }

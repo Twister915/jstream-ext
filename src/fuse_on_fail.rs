@@ -27,7 +27,7 @@ where
                 *this.fused = true;
                 None
             } else {
-                match futures::ready!(this.src.as_mut().try_poll_next(cx)) {
+                match ready!(this.src.as_mut().try_poll_next(cx)) {
                     r @ Some(Ok(_)) => r,
                     None => {
                         *this.fused = true;
@@ -58,9 +58,7 @@ impl<S, Item, E> Sink<Item> for FuseOnFail<S>
 where
     S: TryStream + Sink<Item, Error=E>
 {
-    type Error = E;
-
-    delegate_sink!(src, Item);
+    delegate_sink!(src, E, Item);
 }
 
 impl<S> FuseOnFail<S>

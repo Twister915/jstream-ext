@@ -24,7 +24,7 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
         Poll::Ready(loop {
-            match futures::ready!(this.src.as_mut().try_poll_next(cx)) {
+            match ready!(this.src.as_mut().try_poll_next(cx)) {
                 Some(Ok(v)) => if this.known.insert(hash(&*this.hasher, &v)) {
                     break Some(Ok(v));
                 }
@@ -52,9 +52,7 @@ where
     S: Sink<Item, Error=E> + TryStream,
     S::Ok: Hash
 {
-    type Error = E;
-
-    delegate_sink!(src, Item);
+    delegate_sink!(src, E, Item);
 }
 
 impl<S> TryDedupStream<S>
@@ -95,7 +93,7 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
         Poll::Ready(loop {
-            if let Some(next) = futures::ready!(this.src.as_mut().poll_next(cx)) {
+            if let Some(next) = ready!(this.src.as_mut().poll_next(cx)) {
                 if this.known.insert(hash(&*this.hasher, &next)) {
                     break Some(next);
                 }
@@ -124,9 +122,7 @@ where
     S: Sink<Item> + Stream,
     S::Item: Hash
 {
-    type Error = S::Error;
-
-    delegate_sink!(src, Item);
+    delegate_sink!(src, S::Error, Item);
 }
 
 impl<S> DedupStream<S>

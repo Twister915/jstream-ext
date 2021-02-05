@@ -22,7 +22,7 @@ where
         }
 
         Poll::Ready({
-            let out = futures::ready!(this.src.try_poll_next(cx));
+            let out = ready!(this.src.try_poll_next(cx));
             *this.fused = true;
 
             match out {
@@ -39,9 +39,7 @@ impl<S, Item, E> Sink<Item> for TryStreamFirst<S>
 where
     S: TryStream + Sink<Item, Error=E>,
 {
-    type Error = E;
-
-    delegate_sink!(src, Item);
+    delegate_sink!(src, E, Item);
 }
 
 impl<S> TryStreamFirst<S>
