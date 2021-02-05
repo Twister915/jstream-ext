@@ -40,9 +40,7 @@ where
     S: TryStream + FusedStream,
     F: FnMut(S::Ok) -> Option<R>,
 {
-    fn is_terminated(&self) -> bool {
-        self.src.is_terminated()
-    }
+    delegate_fused!(src);
 }
 
 #[cfg(feature="sink")]

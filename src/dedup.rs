@@ -43,9 +43,7 @@ where
     S: TryStream + FusedStream,
     S::Ok: Hash,
 {
-    fn is_terminated(&self) -> bool {
-        self.src.is_terminated()
-    }
+    delegate_fused!(src);
 }
 
 #[cfg(feature = "sink")]
@@ -117,9 +115,7 @@ where
     S: Stream + FusedStream,
     S::Item: Hash
 {
-    fn is_terminated(&self) -> bool {
-        self.src.is_terminated()
-    }
+    delegate_fused!(src);
 }
 
 #[cfg(feature = "sink")]

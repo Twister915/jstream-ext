@@ -38,6 +38,14 @@ macro_rules! delegate_sink {
     };
 }
 
+macro_rules! delegate_fused {
+    ($nam: ident) => {
+        fn is_terminated(&self) -> bool {
+            self.$nam.is_terminated()
+        }
+    }
+}
+
 op_mods! {
     fuse_on_fail,
     dedup,
