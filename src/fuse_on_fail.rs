@@ -16,8 +16,8 @@ where
 {
     type Item = Result<S::Ok, S::Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut this = self.as_mut().project();
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.project();
         if *this.fused {
             panic!("poll after fused!")
         }
@@ -27,7 +27,7 @@ where
                 *this.fused = true;
                 None
             } else {
-                match ready!(this.src.as_mut().try_poll_next(cx)) {
+                match ready!(this.src.try_poll_next(cx)) {
                     r @ Some(Ok(_)) => r,
                     None => {
                         *this.fused = true;
