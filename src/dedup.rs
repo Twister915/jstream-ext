@@ -1,13 +1,10 @@
-use futures::stream::FusedStream;
-use futures::task::{Context, Poll};
-use futures::{Stream, TryStream};
-use pin_project_lite::pin_project;
+use crate::op_prelude::*;
 use std::collections::hash_map::RandomState;
 use std::collections::HashSet;
 use std::hash::{BuildHasher, Hash, Hasher};
-use std::pin::Pin;
 
 pin_project! {
+    #[must_use = "streams do nothing unless polled"]
     pub struct TryDedupStream<S> {
         #[pin]
         src: S,
@@ -55,12 +52,98 @@ where
     }
 }
 
+#[cfg(feature = "sink")]
+impl<S, Item, E> Sink<Item> for TryDedupStream<S>
+where
+    S: Sink<Item, Error=E> + TryStream,
+    S::Ok: Hash
+{
+    type Error = E;
+
+    delegate_sink!(src, Item);
+}
+
 impl<S> TryDedupStream<S>
 where
     S: TryStream,
     S::Ok: Hash,
 {
-    pub fn new(src: S) -> Self {
+    //noinspection DuplicatedCode
+    pub(crate) fn new(src: S) -> Self {
+        let size_hint = src.size_hint();
+        Self {
+            src,
+            size_hint,
+            hasher: RandomState::default(),
+            known: HashSet::default(),
+        }
+    }
+}
+
+pin_project! {
+    #[must_use = "streams do nothing unless polled"]
+    pub struct DedupStream<S> {
+        #[pin]
+        src: S,
+        size_hint: (usize, Option<usize>),
+        known: HashSet<u64>,
+        hasher: RandomState,
+    }
+}
+
+impl<S> Stream for DedupStream<S>
+where
+    S: Stream,
+    S::Item: Hash,
+{
+    type Item = S::Item;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        loop {
+            let this = self.as_mut().project();
+            match futures::ready!(this.src.poll_next(cx)) {
+                Some(next) => {
+                    if this.known.insert(hash(&*this.hasher, &next)) {
+                        return Poll::Ready(Some(next));
+                    }
+                },
+                None => return Poll::Ready(None),
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.size_hint
+    }
+}
+
+impl<S> FusedStream for DedupStream<S>
+where
+    S: Stream + FusedStream,
+    S::Item: Hash
+{
+    fn is_terminated(&self) -> bool {
+        self.src.is_terminated()
+    }
+}
+
+#[cfg(feature = "sink")]
+impl<S, Item> Sink<Item> for DedupStream<S>
+where
+    S: Sink<Item> + Stream,
+    S::Item: Hash
+{
+    type Error = S::Error;
+
+    delegate_sink!(src, Item);
+}
+
+impl<S> DedupStream<S>
+where
+    S: Stream,
+{
+    //noinspection DuplicatedCode
+    pub(crate) fn new(src: S) -> Self {
         let size_hint = src.size_hint();
         Self {
             src,

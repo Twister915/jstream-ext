@@ -1,9 +1,7 @@
-use futures::task::{Context, Poll};
-use futures::{Future, TryStream};
-use pin_project_lite::pin_project;
-use std::pin::Pin;
+use crate::op_prelude::*;
 
 pin_project! {
+    #[must_use = "streams do nothing unless polled"]
     pub struct TryStreamFirst<S> {
         #[pin]
         src: S,
@@ -38,11 +36,21 @@ where
     }
 }
 
+#[cfg(feature="sink")]
+impl<S, Item, E> Sink<Item> for TryStreamFirst<S>
+where
+    S: TryStream + Sink<Item, Error=E>,
+{
+    type Error = E;
+
+    delegate_sink!(src, Item);
+}
+
 impl<S> TryStreamFirst<S>
 where
     S: TryStream,
 {
-    pub fn new(src: S) -> Self {
+    pub(crate) fn new(src: S) -> Self {
         Self { src, fused: false }
     }
 }

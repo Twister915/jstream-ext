@@ -1,5 +1,6 @@
-use crate::{FuseOnFail, TryDedupStream, TryFilterMapOk, TryStreamFirst};
-use futures::TryStream;
+use crate::ops::*;
+use futures::stream::FusedStream;
+use futures::{Future, Stream, TryFuture, TryStream};
 use std::hash::Hash;
 
 pub trait JTryStreamExt: TryStream + Sized {
@@ -24,6 +25,35 @@ pub trait JTryStreamExt: TryStream + Sized {
     fn fuse_on_fail(self) -> FuseOnFail<Self> {
         FuseOnFail::new(self)
     }
+
+    fn try_fold_mut<T, F, Fut>(self, initial: T, handler: F) -> TryFoldMut<Self, T, F, Fut>
+    where
+        Self: FusedStream,
+        F: FnMut(&mut T, Self::Ok) -> Fut,
+        Fut: TryFuture<Ok = (), Error = Self::Error>,
+    {
+        TryFoldMut::new(self, initial, handler)
+    }
 }
 
 impl<T> JTryStreamExt for T where T: TryStream + Sized {}
+
+pub trait JStreamExt: Stream + Sized {
+    fn dedup(self) -> DedupStream<Self>
+    where
+        Self::Item: Hash,
+    {
+        DedupStream::new(self)
+    }
+
+    fn fold_mut<T, F, Fut>(self, initial: T, handler: F) -> FoldMut<Self, T, F, Fut>
+    where
+        Self: FusedStream,
+        F: FnMut(&mut T, Self::Item) -> Fut,
+        Fut: Future<Output = ()>,
+    {
+        FoldMut::new(self, initial, handler)
+    }
+}
+
+impl<T> JStreamExt for T where T: Stream + Sized {}

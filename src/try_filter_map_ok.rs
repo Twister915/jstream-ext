@@ -1,11 +1,7 @@
-use futures::stream::FusedStream;
-use futures::task::{Context, Poll};
-use futures::{Stream, TryStream};
-use pin_project_lite::pin_project;
-use std::marker::PhantomData;
-use std::pin::Pin;
+use crate::op_prelude::*;
 
 pin_project! {
+    #[must_use = "streams do nothing unless polled"]
     pub struct TryFilterMapOk<S, F, R> {
         #[pin]
         src: S,
@@ -53,12 +49,23 @@ where
     }
 }
 
+#[cfg(feature="sink")]
+impl<S, F, R, Item, E> Sink<Item> for TryFilterMapOk<S, F, R>
+where
+    S: TryStream + FusedStream + Sink<Item, Error=E>,
+    F: FnMut(S::Ok) -> Option<R>,
+{
+    type Error = E;
+
+    delegate_sink!(src, Item);
+}
+
 impl<S, F, R> TryFilterMapOk<S, F, R>
 where
     S: TryStream,
     F: FnMut(S::Ok) -> Option<R>,
 {
-    pub fn new(src: S, predicate: F) -> Self {
+    pub(crate) fn new(src: S, predicate: F) -> Self {
         Self {
             src,
             predicate,
