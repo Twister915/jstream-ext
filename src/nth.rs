@@ -41,7 +41,7 @@ where
                     }
                 },
                 Some(Err(err)) => break Err(err),
-                None => Ok(None),
+                None => break Ok(None),
             }
         })
     }
@@ -92,7 +92,7 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut this = self.project();
         Poll::Ready(loop {
-            if let Some(next) = ready!(this.src.poll_next(cx)) {
+            if let Some(next) = ready!(this.src.as_mut().poll_next(cx)) {
                 if *this.remaining == 0 {
                     break next;
                 } else {
@@ -133,14 +133,14 @@ mod tests {
     fn test_try_stream_first() {
         let items: Vec<Result<&str, ()>> = vec![Ok("hello!"), Ok("should not show up")];
         let src = futures::stream::iter(items);
-        let raised = TryStreamFirst::first(src);
+        let raised = TryStreamNth::first(src);
         assert_eq!(block_on(raised), Ok(Some("hello!")));
     }
 
     #[test]
     fn test_try_stream_nothing() {
         let src = futures::stream::empty::<Result<(), ()>>();
-        let raised = TryStreamFirst::first(src);
+        let raised = TryStreamNth::first(src);
         assert_eq!(block_on(raised), Ok(None));
     }
 }
