@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate futures;
+
 macro_rules! op_mods {
     {$($nam: ident),*$(,)*} => {
         $(pub mod $nam;)*
@@ -57,7 +60,6 @@ op_mods! {
 }
 
 pub(crate) mod op_prelude {
-    pub use futures::ready;
     #[cfg(feature = "sink")]
     pub use futures::sink::Sink;
     pub use futures::stream::FusedStream;
